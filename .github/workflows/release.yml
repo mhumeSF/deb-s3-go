@@ -34,7 +34,17 @@ jobs:
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --build-arg VERSION="${GITHUB_REF_NAME#v}" \
+            --provenance=false \
             --output "type=oci,dest=dist/deb-s3-go_${GITHUB_REF_NAME#v}_oci.tar" .
+      - name: Append checksums for release-only artifacts
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          artifact_names=(
+            "deb-s3-go_${version}_linux_amd64.tar.gz"
+            "deb-s3-go_${version}_linux_arm64.tar.gz"
+            "deb-s3-go_${version}_oci.tar"
+          )
+          (cd dist && sha256sum "${artifact_names[@]}") >> dist/checksums.txt
       - name: Verify checksums
         run: cd dist && sha256sum --check checksums.txt
       - name: Test amd64 package
