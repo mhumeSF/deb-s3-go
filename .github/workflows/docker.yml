@@ -58,6 +58,8 @@ jobs:
             VERSION=${{ steps.version.outputs.version }}
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
+          cache-from: type=registry,ref=ghcr.io/mhumesf/deb-s3-go:buildcache
+          cache-to: type=registry,ref=ghcr.io/mhumesf/deb-s3-go:buildcache,mode=max
       - name: Link image in release notes
         if: github.event_name == 'release'
         env:
