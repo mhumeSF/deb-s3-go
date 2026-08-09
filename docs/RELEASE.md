@@ -8,6 +8,9 @@ dist/deb-s3_linux_amd64
 dist/deb-s3_linux_arm64
 dist/deb-s3-go_<version>_amd64.deb
 dist/deb-s3-go_<version>_arm64.deb
+dist/deb-s3-go_<version>_linux_amd64.tar.gz
+dist/deb-s3-go_<version>_linux_arm64.tar.gz
+dist/deb-s3-go_<version>_oci.tar
 dist/checksums.txt
 ```
 
@@ -35,7 +38,8 @@ Every push runs the unit tests (including the race detector), S3
 configuration tests, `go vet`, both cross-builds, checksum verification, and
 an install test of the amd64 package. Publishing a GitHub release runs the
 same build, tests the amd64 package, and attaches the binaries, packages,
-and checksum file as release assets.
+standalone binary archives, OCI image archive, and checksum file as release
+assets.
 
 Packages are built with [nFPM](https://nfpm.goreleaser.com/docs/configuration/),
 whose version is pinned in `mise.toml` so release behavior does not change

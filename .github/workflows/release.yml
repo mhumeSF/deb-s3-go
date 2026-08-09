@@ -24,6 +24,11 @@ jobs:
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
       - name: Build release artifacts
         run: VERSION="${GITHUB_REF_NAME#v}" mise run build:deb
+      - name: Package standalone binaries
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          tar -C dist -czf "dist/deb-s3-go_${version}_linux_amd64.tar.gz" deb-s3_linux_amd64
+          tar -C dist -czf "dist/deb-s3-go_${version}_linux_arm64.tar.gz" deb-s3_linux_arm64
       - name: Build OCI image archive
         run: |
           docker buildx build \
