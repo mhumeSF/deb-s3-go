@@ -18,10 +18,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
       - name: Build release artifacts
         run: VERSION="${GITHUB_REF_NAME#v}" mise run build:deb
       - name: Package standalone binaries
@@ -29,20 +25,12 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           tar -C dist -czf "dist/deb-s3-go_${version}_linux_amd64.tar.gz" deb-s3_linux_amd64
           tar -C dist -czf "dist/deb-s3-go_${version}_linux_arm64.tar.gz" deb-s3_linux_arm64
-      - name: Build OCI image archive
-        run: |
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --build-arg VERSION="${GITHUB_REF_NAME#v}" \
-            --provenance=false \
-            --output "type=oci,dest=dist/deb-s3-go_${GITHUB_REF_NAME#v}_oci.tar" .
       - name: Append checksums for release-only artifacts
         run: |
           version="${GITHUB_REF_NAME#v}"
           artifact_names=(
             "deb-s3-go_${version}_linux_amd64.tar.gz"
             "deb-s3-go_${version}_linux_arm64.tar.gz"
-            "deb-s3-go_${version}_oci.tar"
           )
           (cd dist && sha256sum "${artifact_names[@]}") >> dist/checksums.txt
       - name: Verify checksums
