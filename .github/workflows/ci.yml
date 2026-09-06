@@ -8,6 +8,9 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   go:
     runs-on: ubuntu-latest
@@ -31,6 +34,8 @@ jobs:
           fi
       - name: Check go.mod is tidy
         run: go mod tidy -diff
+      - name: Install GPG for signing tests
+        run: sudo apt-get update && sudo apt-get install -y gnupg
       - name: Test
         run: go test ./...
       - name: Test with race detector
@@ -62,3 +67,44 @@ jobs:
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y ./dist/deb-s3-go_0.0.0-ci_amd64.deb
           test "$(deb-s3 --version)" = "deb-s3 version 0.0.0-ci"
+
+  s3-integration:
+    # Forks cannot request AWS credentials; a failed gate prevents auto-merging them.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TEST_BUCKET: meadow-checks-4827
+      TEST_PREFIX: ci/${{ github.run_id }}/${{ github.run_attempt }}
+    steps:
+      - name: Require a branch in this repository
+        if: github.event_name == 'pull_request'
+        env:
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        run: test "$HEAD_REPOSITORY" = "$GITHUB_REPOSITORY"
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Install test tools
+        run: sudo apt-get update && sudo apt-get install -y gnupg
+      - name: Build CLI
+        run: go build -o "$RUNNER_TEMP/deb-s3" ./cmd/deb-s3
+      - name: Authenticate to test bucket
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+        with:
+          role-to-assume: arn:aws:iam::688929843895:role/meadow-checks-ci
+          aws-region: us-east-1
+          role-session-name: ci-${{ github.run_id }}
+          allowed-account-ids: '688929843895'
+      - name: Test S3 and signed APT installation
+        run: python3 ci/integration.py --binary "$RUNNER_TEMP/deb-s3" --apt
+      - name: Clean up test objects
+        if: always()
+        run: aws s3 rm "s3://$TEST_BUCKET/$TEST_PREFIX/" --recursive
