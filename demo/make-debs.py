@@ -9,15 +9,17 @@ library so no dpkg tooling is required.
 import gzip
 import io
 import os
+import posixpath
 import sys
 import tarfile
 
 
 def ar_member(name, data):
-    if len(data) % 2:
+    size = len(data)
+    if size % 2:
         data += b"\n"
     header = "{:<16}{:<12}{:<6}{:<6}{:<8}{:<10}`\n".format(
-        name, "0", "0", "0", "100644", str(len(data))
+        name, "0", "0", "0", "100644", str(size)
     ).encode("ascii")
     return header + data
 
@@ -32,6 +34,18 @@ def ar_archive(members):
 def tar_gz(files):
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w") as archive:
+        directories = set()
+        for name in files:
+            parent = posixpath.dirname(name)
+            while parent:
+                directories.add(parent)
+                parent = posixpath.dirname(parent)
+        for name in sorted(directories):
+            info = tarfile.TarInfo(name)
+            info.type = tarfile.DIRTYPE
+            info.mode = 0o755
+            info.mtime = 0
+            archive.addfile(info)
         for name, data in files.items():
             info = tarfile.TarInfo(name)
             info.size = len(data)
