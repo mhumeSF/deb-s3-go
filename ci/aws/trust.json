@@ -11,8 +11,8 @@
         "StringEquals": {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
           "token.actions.githubusercontent.com:sub": [
-            "repo:mhumeSF/deb-s3-go:pull_request",
-            "repo:mhumeSF/deb-s3-go:ref:refs/heads/main"
+            "repo:mhumeSF@1088457/deb-s3-go@1325721914:pull_request",
+            "repo:mhumeSF@1088457/deb-s3-go@1325721914:ref:refs/heads/main"
           ]
         }
       }
