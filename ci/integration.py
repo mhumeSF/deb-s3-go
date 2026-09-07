@@ -6,6 +6,7 @@ import http.server
 import os
 from pathlib import Path
 import subprocess
+import shutil
 import tempfile
 import threading
 import uuid
@@ -74,7 +75,11 @@ def main():
 
             mirror = root / 'repo'
             def sync():
-                run(*aws, 's3', 'sync', uri, mirror, '--delete', env=env)
+                # Same-size metadata can change within timestamp granularity.
+                # Download a fresh snapshot instead of using sync's size/mtime heuristic.
+                if mirror.exists():
+                    shutil.rmtree(mirror)
+                run(*aws, 's3', 'cp', uri, mirror, '--recursive', env=env)
             sync()
             release = mirror / 'dists/stable'
             run('gpg', '--verify', release / 'InRelease', env=env)
@@ -85,7 +90,13 @@ def main():
             if args.apt:
                 public_key = root / 'signing.asc'
                 public_key.write_text(run('gpg', '--armor', '--export', 'ci@example.test', env=env))
-                handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(mirror))
+                class RepositoryHandler(http.server.SimpleHTTPRequestHandler):
+                    def do_GET(self):
+                        # This snapshot server has no reliable Last-Modified validator.
+                        if 'If-Modified-Since' in self.headers:
+                            del self.headers['If-Modified-Since']
+                        super().do_GET()
+                handler = functools.partial(RepositoryHandler, directory=str(mirror))
                 server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), handler)
                 threading.Thread(target=server.serve_forever, daemon=True).start()
                 source = root / 'sources.list'
