@@ -48,6 +48,7 @@ def main():
             import json
             return json.loads(run(*aws, 's3api', 'list-objects-v2', '--bucket', bucket,
                                   '--prefix', prefix + '/', '--output', 'json', env=env)).get('Contents', [])
+        server = None
         try:
             run('python3', 'demo/make-debs.py', fixtures)
             run('gpg', '--batch', '--pinentry-mode', 'loopback', '--passphrase', '',
@@ -125,7 +126,14 @@ def main():
                 if server:
                     server.shutdown()
         finally:
-            run(*aws, 's3', 'rm', uri, '--recursive', env=env)
+            if server:
+                server.shutdown()
+                server.server_close()
+            try:
+                run(*aws, 's3', 'rm', uri, '--recursive', env=env)
+            finally:
+                if args.apt and (root / 'lists').exists():
+                    run('sudo', 'chown', '-R', f'{os.getuid()}:{os.getgid()}', root / 'lists')
 
 
 if __name__ == '__main__':
