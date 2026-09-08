@@ -34,6 +34,13 @@ jobs:
           fi
       - name: Check go.mod is tidy
         run: go mod tidy -diff
+      - name: Check Dockerfile Go version matches go.mod
+        run: |
+          go_mod_version=$(grep -oE '^go [0-9]+\.[0-9]+' go.mod | grep -oE '[0-9]+\.[0-9]+')
+          dockerfile_version=$(grep -oE 'FROM golang:[0-9]+\.[0-9]+' Dockerfile | grep -oE '[0-9]+\.[0-9]+')
+          echo "go.mod go directive: $go_mod_version"
+          echo "Dockerfile golang base: $dockerfile_version"
+          test "$go_mod_version" = "$dockerfile_version"
       - name: Install GPG for signing tests
         run: sudo apt-get update && sudo apt-get install -y gnupg
       - name: Test

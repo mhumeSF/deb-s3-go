@@ -14,7 +14,11 @@ import (
 	"github.com/mhumesf/deb-s3-go/internal/storage"
 )
 
-var releaseArchitectures = []string{"amd64", "i386", "armhf", "arm64"}
+// DefaultArchitectures is the set of architectures seeded when an
+// Architecture: all package is uploaded to a repository that does not yet
+// declare any. Once a Release advertises architectures, those are the source
+// of truth (see Release.MissingManifests).
+var DefaultArchitectures = []string{"amd64", "i386", "armhf", "arm64"}
 
 type ReleaseOptions struct {
 	Codename     string

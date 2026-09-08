@@ -188,22 +188,26 @@ func TestValidateOtherManifests(t *testing.T) {
 	if err := release.ValidateOtherManifests(ctx, func(filename string) { transferred = append(transferred, filename) }); err != nil {
 		t.Fatal(err)
 	}
+	// Every architecture the Release advertises gets a backfill index, including
+	// non-default architectures like riscv64: a declared architecture without a
+	// Packages index leaves APT clients for that architecture with a 404.
 	wantTransferred := []string{
 		"dists/stable/main/binary-arm64/Packages",
 		"dists/stable/main/binary-arm64/Packages.gz",
+		"dists/stable/main/binary-riscv64/Packages",
+		"dists/stable/main/binary-riscv64/Packages.gz",
 		"dists/stable/contrib/binary-amd64/Packages",
 		"dists/stable/contrib/binary-amd64/Packages.gz",
 		"dists/stable/contrib/binary-arm64/Packages",
 		"dists/stable/contrib/binary-arm64/Packages.gz",
+		"dists/stable/contrib/binary-riscv64/Packages",
+		"dists/stable/contrib/binary-riscv64/Packages.gz",
 	}
 	if !reflect.DeepEqual(transferred, wantTransferred) {
 		t.Fatalf("transferred = %#v, want %#v", transferred, wantTransferred)
 	}
-	if len(release.Files) != 8 {
+	if len(release.Files) != 12 {
 		t.Fatalf("Release files = %#v", release.Files)
-	}
-	if _, exists := release.Files["main/binary-riscv64/Packages"]; exists {
-		t.Fatal("manifest backfill unexpectedly generated riscv64")
 	}
 	for _, filename := range wantTransferred {
 		info, err := store.Head(ctx, filename)

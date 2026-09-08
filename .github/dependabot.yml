@@ -20,3 +20,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # The Go toolchain version is owned by go.mod (the module's go
+      # directive) so the container build never drifts from CI and local
+      # builds. Dependabot still bumps the final alpine stage.
+      - dependency-name: "golang"
