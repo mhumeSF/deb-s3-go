@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"path"
-	"slices"
 
 	"github.com/mhumesf/deb-s3-go/internal/storage"
 )
@@ -36,9 +35,9 @@ func (r *Release) MissingManifests() ([]*Manifest, error) {
 	}
 	created := make([]*Manifest, 0)
 	for _, component := range r.Components {
-		for _, architecture := range releaseArchitectures {
+		for _, architecture := range r.Architectures {
 			packagesPath := component + "/binary-" + architecture + "/Packages"
-			if _, exists := r.Files[packagesPath]; exists || !slices.Contains(r.Architectures, architecture) {
+			if _, exists := r.Files[packagesPath]; exists {
 				continue
 			}
 			manifest := NewManifest(r.store, ManifestOptions{

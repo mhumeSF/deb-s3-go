@@ -12,8 +12,6 @@ import (
 	"github.com/mhumesf/deb-s3-go/internal/storage"
 )
 
-var defaultArchitectures = []string{"amd64", "i386", "armhf", "arm64"}
-
 type Options struct {
 	Codename          string
 	Component         string
@@ -120,8 +118,8 @@ func (r Runner) Upload(ctx context.Context, patterns []string, options Options) 
 			return fmt.Errorf("no architecture given and unable to determine one for %s; specify one with --arch", filename)
 		}
 		if architecture == "all" && len(manifests) == 0 {
-			for _, defaultArchitecture := range defaultArchitectures {
-				if _, err := manifestFor(defaultArchitecture); err != nil {
+			for _, seedArchitecture := range seedArchitectures(release) {
+				if _, err := manifestFor(seedArchitecture); err != nil {
 					return err
 				}
 			}
@@ -221,6 +219,17 @@ func inspectPackage(ctx context.Context, filename string) (*apt.Package, error) 
 		return nil, err
 	}
 	return info.Package, nil
+}
+
+// seedArchitectures selects the architectures to fan an Architecture: all package
+// into when no manifests exist yet. A repository that already declares
+// architectures is the source of truth; otherwise the common default set is
+// used so a brand-new repository serves the architectures APT clients expect.
+func seedArchitectures(release *apt.Release) []string {
+	if len(release.Architectures) > 0 {
+		return release.Architectures
+	}
+	return apt.DefaultArchitectures
 }
 
 func (r Runner) log(message string) {
