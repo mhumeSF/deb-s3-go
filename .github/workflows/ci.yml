@@ -105,7 +105,7 @@ jobs:
         run: go build -o "$RUNNER_TEMP/deb-s3" ./cmd/deb-s3
       - name: Authenticate to test bucket
         id: aws
-        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: arn:aws:iam::688929843895:role/meadow-checks-ci
           aws-region: us-east-1
