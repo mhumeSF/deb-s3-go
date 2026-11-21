@@ -45,7 +45,7 @@ func TestDevelopmentVersion(t *testing.T) {
 func TestGlobalFlagSurface(t *testing.T) {
 	root := NewRootCommand()
 	want := []string{
-		"bucket", "prefix", "origin", "suite", "codename", "component",
+		"bucket", "prefix", "origin", "label", "suite", "description", "codename", "component",
 		"section", "access-key-id", "secret-access-key", "session-token",
 		"endpoint", "s3-region", "force-path-style", "no-force-path-style",
 		"proxy-uri", "visibility", "sign", "gpg-options", "gpg-provider",
@@ -766,4 +766,27 @@ func containsString(values []string, target string) bool {
 		}
 	}
 	return false
+}
+
+func TestReleaseFieldOverrides(t *testing.T) {
+	root := NewRootCommand()
+	if err := root.PersistentFlags().Parse([]string{"--label", "Example", "--description", ""}); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &config.Config{Label: "Example"}
+	fields, err := releaseFieldOverrides(root, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fields.origin != nil || fields.suite != nil {
+		t.Fatalf("unset flags produced overrides: %#v", fields)
+	}
+	if fields.label == nil || *fields.label != "Example" || fields.description == nil || *fields.description != "" {
+		t.Fatalf("set flags did not produce overrides: %#v", fields)
+	}
+
+	cfg.Description = "first\nsecond"
+	if _, err := releaseFieldOverrides(root, cfg); err == nil || !strings.Contains(err.Error(), "--description must be a single line") {
+		t.Fatalf("multi-line description error = %v", err)
+	}
 }

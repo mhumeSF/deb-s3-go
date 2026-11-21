@@ -22,7 +22,9 @@ type Config struct {
 	Bucket               string
 	Prefix               string
 	Origin               string
+	Label                string
 	Suite                string
+	Description          string
 	Codename             string
 	Component            string
 	Section              string

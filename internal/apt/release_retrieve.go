@@ -33,8 +33,14 @@ func RetrieveRelease(ctx context.Context, store storage.Store, options ReleaseOp
 		if options.Origin != nil {
 			release.Origin = cloneStringPointer(options.Origin)
 		}
+		if options.Label != nil {
+			release.Label = cloneStringPointer(options.Label)
+		}
 		if options.Suite != nil {
 			release.Suite = cloneStringPointer(options.Suite)
+		}
+		if options.Description != nil {
+			release.Description = cloneStringPointer(options.Description)
 		}
 		if options.ByHash != nil {
 			release.ByHash = *options.ByHash
