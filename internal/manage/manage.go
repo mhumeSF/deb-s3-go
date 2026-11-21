@@ -50,7 +50,9 @@ type DeleteOptions struct {
 	Versions     []string
 	VersionsSet  bool
 	Origin       *string
+	Label        *string
 	Suite        *string
+	Description  *string
 	CacheControl string
 	ByHash       *bool
 	Signer       apt.ReleaseSigner
@@ -123,7 +125,8 @@ func (r Repository) Delete(ctx context.Context, options DeleteOptions) error {
 	}
 	r.log("Retrieving existing manifests")
 	release, err := apt.RetrieveRelease(ctx, r.Store, apt.ReleaseOptions{
-		Codename: options.Codename, Origin: options.Origin, Suite: options.Suite,
+		Codename: options.Codename, Origin: options.Origin, Label: options.Label,
+		Suite: options.Suite, Description: options.Description,
 		CacheControl: options.CacheControl, ByHash: options.ByHash, Signer: options.Signer,
 	})
 	if err != nil {

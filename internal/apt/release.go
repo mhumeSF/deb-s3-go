@@ -23,7 +23,9 @@ var DefaultArchitectures = []string{"amd64", "i386", "armhf", "arm64"}
 type ReleaseOptions struct {
 	Codename     string
 	Origin       *string
+	Label        *string
 	Suite        *string
+	Description  *string
 	CacheControl string
 	ByHash       *bool
 	Signer       ReleaseSigner
@@ -44,7 +46,9 @@ type Release struct {
 
 	Codename      string
 	Origin        *string
+	Label         *string
 	Suite         *string
+	Description   *string
 	Architectures []string
 	Components    []string
 	CacheControl  string
@@ -63,7 +67,9 @@ func NewRelease(store storage.Store, options ReleaseOptions) *Release {
 		store:        store,
 		Codename:     options.Codename,
 		Origin:       cloneStringPointer(options.Origin),
+		Label:        cloneStringPointer(options.Label),
 		Suite:        cloneStringPointer(options.Suite),
+		Description:  cloneStringPointer(options.Description),
 		CacheControl: options.CacheControl,
 		Signer:       options.Signer,
 		Files:        make(map[string]FileHashes),
@@ -81,8 +87,14 @@ func ParseRelease(input string) (*Release, error) {
 	if value, ok := releaseField(input, "Origin"); ok {
 		release.Origin = &value
 	}
+	if value, ok := releaseField(input, "Label"); ok {
+		release.Label = &value
+	}
 	if value, ok := releaseField(input, "Suite"); ok {
 		release.Suite = &value
+	}
+	if value, ok := releaseField(input, "Description"); ok {
+		release.Description = &value
 	}
 	if value, ok := releaseField(input, "Acquire-By-Hash"); ok {
 		release.ByHash = strings.EqualFold(strings.TrimSpace(value), "yes")
@@ -136,11 +148,17 @@ func (r *Release) Render() (string, error) {
 	if r.Origin != nil {
 		writeField(&output, "Origin", *r.Origin)
 	}
+	if r.Label != nil {
+		writeField(&output, "Label", *r.Label)
+	}
 	writeField(&output, "Codename", r.Codename)
 	writeField(&output, "Date", r.Now().UTC().Format("Mon, 02 Jan 2006 15:04:05 UTC"))
 	writeField(&output, "Architectures", strings.Join(r.Architectures, " "))
 	writeField(&output, "Components", strings.Join(r.Components, " "))
 	writeField(&output, "Suite", pointerValue(r.Suite))
+	if r.Description != nil {
+		writeField(&output, "Description", *r.Description)
+	}
 	if r.ByHash {
 		writeField(&output, "Acquire-By-Hash", "yes")
 	}

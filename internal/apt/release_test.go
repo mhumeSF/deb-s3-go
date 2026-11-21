@@ -175,6 +175,62 @@ func TestRetrieveReleaseExistingAndMissing(t *testing.T) {
 	}
 }
 
+func TestReleaseLabelAndDescription(t *testing.T) {
+	ctx := context.Background()
+	store := storage.NewMemoryStore("repo")
+	label := "Example Label"
+	description := "Example packages"
+	release := NewRelease(store, ReleaseOptions{Codename: "stable", Label: &label, Description: &description, Now: fixedReleaseClock})
+	release.Architectures = []string{"amd64"}
+	release.Components = []string{"main"}
+	output, err := release.Render()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(output, "Label: Example Label\nCodename: stable\n") || !strings.Contains(output, "Suite: \nDescription: Example packages\nMD5Sum:\n") {
+		t.Fatalf("Label/Description were not rendered in place:\n%s", output)
+	}
+	if err := store.Put(ctx, "dists/stable/Release", strings.NewReader(output), storage.PutOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	existing, err := RetrieveRelease(ctx, store, ReleaseOptions{Codename: "stable", Now: fixedReleaseClock})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if existing.Label == nil || *existing.Label != label || existing.Description == nil || *existing.Description != description {
+		t.Fatalf("existing fields were not preserved: %#v", existing)
+	}
+	rendered, err := existing.Render()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rendered != output {
+		firstDifference(t, output, rendered)
+	}
+
+	overrideLabel := "Override"
+	overrideDescription := "Other packages"
+	overridden, err := RetrieveRelease(ctx, store, ReleaseOptions{
+		Codename: "stable", Label: &overrideLabel, Description: &overrideDescription, Now: fixedReleaseClock,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *overridden.Label != overrideLabel || *overridden.Description != overrideDescription {
+		t.Fatalf("overridden Release = %#v", overridden)
+	}
+
+	unset := NewRelease(nil, ReleaseOptions{Codename: "stable", Now: fixedReleaseClock})
+	output, err = unset.Render()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(output, "Label:") || strings.Contains(output, "Description:") {
+		t.Fatalf("nil Label/Description were rendered:\n%s", output)
+	}
+}
+
 func TestValidateOtherManifests(t *testing.T) {
 	ctx := context.Background()
 	store := storage.NewMemoryStore("repo")

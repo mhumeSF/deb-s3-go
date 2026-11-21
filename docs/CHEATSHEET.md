@@ -192,7 +192,9 @@ Scope all repository keys beneath a prefix:
 | `--codename`, `-c` | Distribution codename; defaults to `stable` |
 | `--component`, `-m` | Repository component; defaults to `main` |
 | `--origin`, `-o` | Release file origin |
+| `--label` | Release file label |
 | `--suite` | Release file suite |
+| `--description` | Release file description |
 | `--by-hash` | Enable `Acquire-By-Hash` publication |
 | `--sign[=KEY_ID]` | Sign Release metadata; repeatable |
 | `--cache-control`, `-C` | Set object Cache-Control metadata |

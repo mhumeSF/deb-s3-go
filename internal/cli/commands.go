@@ -46,7 +46,10 @@ func newUploadCommand(cfg *config.Config, newStore storeFactory) *cobra.Command 
 				return err
 			}
 			component := componentFor(cmd, cfg)
-			origin, suite := originSuiteOverrides(cmd, cfg)
+			fields, err := releaseFieldOverrides(cmd, cfg)
+			if err != nil {
+				return err
+			}
 			progress := upload.Progress{}
 			if !cfg.Quiet {
 				progress.Log = func(message string) { fmt.Fprintf(cmd.OutOrStdout(), ">> %s\n", message) }
@@ -55,7 +58,8 @@ func newUploadCommand(cfg *config.Config, newStore storeFactory) *cobra.Command 
 			runner := upload.Runner{Store: store, Progress: progress}
 			return withRepositoryLock(cmd, cfg, store, lock, cfg.Codename, func(ctx context.Context) error {
 				return runner.Upload(ctx, args, upload.Options{
-					Codename: cfg.Codename, Component: component, Origin: origin, Suite: suite,
+					Codename: cfg.Codename, Component: component, Origin: fields.origin, Label: fields.label,
+					Suite: fields.suite, Description: fields.description,
 					Architecture: architecture, ArchitectureSet: cmd.Flags().Changed("arch"),
 					PreserveVersions: preserveVersions, FailIfExists: failIfExists,
 					SkipPackageUpload: skipPackageUpload, CacheControl: cfg.CacheControl,
@@ -286,14 +290,18 @@ func newDeleteCommand(cfg *config.Config, newStore storeFactory) *cobra.Command 
 			if err != nil {
 				return err
 			}
-			origin, suite := originSuiteOverrides(cmd, cfg)
+			fields, err := releaseFieldOverrides(cmd, cfg)
+			if err != nil {
+				return err
+			}
 			versionsSet := cmd.Flags().Changed("versions")
 			repository := manage.Repository{Store: store, Progress: manageProgress(cmd, cfg)}
 			return withRepositoryLock(cmd, cfg, store, lock, cfg.Codename, func(ctx context.Context) error {
 				err := repository.Delete(ctx, manage.DeleteOptions{
 					Codename: cfg.Codename, Component: componentFor(cmd, cfg), Architecture: architecture,
 					Package: args[0], Versions: versions, VersionsSet: versionsSet,
-					Origin: origin, Suite: suite, CacheControl: cfg.CacheControl, ByHash: byHashOption(cmd, cfg), Signer: signer,
+					Origin: fields.origin, Label: fields.label, Suite: fields.suite, Description: fields.description,
+					CacheControl: cfg.CacheControl, ByHash: byHashOption(cmd, cfg), Signer: signer,
 				})
 				if errors.Is(err, manage.ErrNoPackagesDeleted) {
 					if versionsSet {
@@ -333,18 +341,36 @@ func byHashOption(cmd *cobra.Command, cfg *config.Config) *bool {
 	return &cfg.ByHash
 }
 
-// originSuiteOverrides returns --origin/--suite values only when the flags
-// were provided, so values already present in a Release file are preserved
-// otherwise.
-func originSuiteOverrides(cmd *cobra.Command, cfg *config.Config) (origin, suite *string) {
+type releaseFields struct {
+	origin, label, suite, description *string
+}
+
+// releaseFieldOverrides returns --origin/--label/--suite/--description values
+// only when the flags were provided, so values already present in a Release
+// file are preserved otherwise.
+func releaseFieldOverrides(cmd *cobra.Command, cfg *config.Config) (releaseFields, error) {
 	persistent := cmd.Root().PersistentFlags()
-	if persistent.Changed("origin") {
-		origin = &cfg.Origin
+	var fields releaseFields
+	for _, field := range []struct {
+		flag   string
+		value  *string
+		target **string
+	}{
+		{"origin", &cfg.Origin, &fields.origin},
+		{"label", &cfg.Label, &fields.label},
+		{"suite", &cfg.Suite, &fields.suite},
+		{"description", &cfg.Description, &fields.description},
+	} {
+		if !persistent.Changed(field.flag) {
+			continue
+		}
+		// Release fields are parsed back as single lines on the next publish.
+		if strings.ContainsAny(*field.value, "\r\n") {
+			return releaseFields{}, fmt.Errorf("--%s must be a single line", field.flag)
+		}
+		*field.target = field.value
 	}
-	if persistent.Changed("suite") {
-		suite = &cfg.Suite
-	}
-	return origin, suite
+	return fields, nil
 }
 
 func configuredSigner(cfg *config.Config) (apt.ReleaseSigner, error) {
@@ -417,7 +443,10 @@ func newVerifyCommand(cfg *config.Config, newStore storeFactory) *cobra.Command 
 			if err != nil {
 				return err
 			}
-			origin, suite := originSuiteOverrides(cmd, cfg)
+			fields, err := releaseFieldOverrides(cmd, cfg)
+			if err != nil {
+				return err
+			}
 			progress := maintenance.Progress{}
 			if !cfg.Quiet {
 				progress.Log = func(message string) { fmt.Fprintf(cmd.OutOrStdout(), ">> %s\n", message) }
@@ -440,7 +469,8 @@ func newVerifyCommand(cfg *config.Config, newStore storeFactory) *cobra.Command 
 			repository := maintenance.Repository{Store: store, Progress: progress}
 			_, err = repository.Verify(cmd.Context(), maintenance.VerifyOptions{
 				Codename: cfg.Codename, Component: componentFor(cmd, cfg), FixManifests: fixManifests,
-				Origin: origin, Suite: suite, CacheControl: cfg.CacheControl, ByHash: byHashOption(cmd, cfg), Signer: signer,
+				Origin: fields.origin, Label: fields.label, Suite: fields.suite, Description: fields.description,
+				CacheControl: cfg.CacheControl, ByHash: byHashOption(cmd, cfg), Signer: signer,
 			})
 			return err
 		},
